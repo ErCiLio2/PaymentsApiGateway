@@ -1,0 +1,14 @@
+.env
+*.local
+
+# Go
+services/*/bin/
+services/*/*.exe
+
+# SvelteKit
+web/.svelte-kit/
+web/build/
+web/node_modules/
+
+# Docker
+*.log
