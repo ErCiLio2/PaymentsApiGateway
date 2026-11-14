@@ -8,7 +8,10 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-const ChargeTTL = 30 * time.Minute
+const (
+	ChargeTTL      = 30 * time.Minute
+	chargesIndexKey = "proxypay-sandbox:charges"
+)
 
 type ChargeStatus string
 
@@ -50,7 +53,53 @@ func (s *Store) SaveCharge(ctx context.Context, c *Charge) error {
 	if err != nil {
 		return err
 	}
-	return s.rdb.SetEx(ctx, chargeKey(c.ID), string(data), ChargeTTL).Err()
+	pipe := s.rdb.Pipeline()
+	pipe.SetEx(ctx, chargeKey(c.ID), string(data), ChargeTTL)
+	pipe.ZAdd(ctx, chargesIndexKey, redis.Z{
+		Score:  float64(c.CreatedAt.Unix()),
+		Member: c.ID,
+	})
+	_, err = pipe.Exec(ctx)
+	return err
+}
+
+func (s *Store) ListCharges(ctx context.Context) ([]*Charge, error) {
+	ids, err := s.rdb.ZRevRange(ctx, chargesIndexKey, 0, -1).Result()
+	if err != nil {
+		return nil, err
+	}
+	if len(ids) == 0 {
+		return []*Charge{}, nil
+	}
+
+	pipe := s.rdb.Pipeline()
+	cmds := make([]*redis.StringCmd, len(ids))
+	for i, id := range ids {
+		cmds[i] = pipe.Get(ctx, chargeKey(id))
+	}
+	if _, err := pipe.Exec(ctx); err != nil && err != redis.Nil {
+		return nil, err
+	}
+
+	charges := make([]*Charge, 0, len(ids))
+	for _, cmd := range cmds {
+		raw, err := cmd.Result()
+		if err == redis.Nil {
+			continue
+		}
+		if err != nil {
+			continue
+		}
+		var c Charge
+		if err := json.Unmarshal([]byte(raw), &c); err != nil {
+			continue
+		}
+		if time.Now().After(c.ExpiresAt) {
+			c.Status = StatusExpired
+		}
+		charges = append(charges, &c)
+	}
+	return charges, nil
 }
 
 func (s *Store) GetCharge(ctx context.Context, id string) (*Charge, error) {

@@ -10,6 +10,7 @@ type Config struct {
 	Port           string
 	RedisURL       string
 	APIKey         string // chave que os clientes usam para criar charges
+	AdminKey       string // chave do backoffice de administração
 	PosID          int
 	WebhookSecret  string // segredo para assinar os callbacks enviados ao cliente
 	BaseURL        string // URL pública desta instância (para deeplinks e qrcode_url)
@@ -22,6 +23,7 @@ func Load() (*Config, error) {
 		Port:           getEnv("PORT", "8080"),
 		RedisURL:       getEnv("REDIS_URL", "redis://localhost:6379"),
 		APIKey:         getEnv("API_KEY", "dev-key"),
+		AdminKey:       getEnv("ADMIN_KEY", "admin"),
 		WebhookSecret:  getEnv("WEBHOOK_SECRET", ""),
 		BaseURL:        getEnv("BASE_URL", "http://localhost:8080"),
 		WebURL:         getEnv("WEB_URL", "http://localhost:5173"),

@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	qrcode "github.com/skip2/go-qrcode"
@@ -198,6 +199,25 @@ func (h *Handler) sendCallback(c *store.Charge, decision string) {
 	}
 	defer resp.Body.Close()
 	log.Printf("[sandbox] callback %s → %s: %d", c.ID, c.CallbackURL, resp.StatusCode)
+}
+
+// GET /api/admin/charges — lista todas as charges (protegido por Bearer token)
+func (h *Handler) ListCharges(w http.ResponseWriter, r *http.Request) {
+	token := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
+	if token != h.cfg.AdminKey {
+		jsonError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+
+	charges, err := h.store.ListCharges(r.Context())
+	if err != nil {
+		log.Printf("[sandbox] erro ao listar charges: %v", err)
+		jsonError(w, http.StatusInternalServerError, "store_error")
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(charges)
 }
 
 func (h *Handler) validateBasicAuth(r *http.Request) bool {
