@@ -1,5 +1,6 @@
 .env
 *.local
+CLAUDE.local.md
 
 # Go
 services/*/bin/
