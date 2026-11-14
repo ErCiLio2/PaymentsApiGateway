@@ -30,7 +30,7 @@ services:
       PORT: "3000"
       PROXYPAY_API_URL: http://proxypay:8080
     ports:
-      - "${WEB_HOST_PORT:-3000}:3000"
+      - "${WEB_HOST_PORT:-3001}:3000"
     depends_on:
       - proxypay
 
