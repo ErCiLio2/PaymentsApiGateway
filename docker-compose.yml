@@ -8,6 +8,8 @@ services:
   proxypay:
     build: ./services/proxypay
     restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       PORT: "8080"
       REDIS_URL: redis://redis:6379
@@ -15,7 +17,7 @@ services:
       POS_ID: ${PROXYPAY_POS_ID:-1}
       WEBHOOK_SECRET: ${PROXYPAY_WEBHOOK_SECRET}
       BASE_URL: ${PROXYPAY_BASE_URL:-http://localhost:8080}
-      WEB_URL: ${WEB_URL:-http://localhost:3000}
+      WEB_URL: ${WEB_URL:-http://localhost:3001}
     ports:
       - "${PROXYPAY_HOST_PORT:-8080}:8080"
     depends_on:
