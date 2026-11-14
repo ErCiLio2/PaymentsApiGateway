@@ -1,3 +1,46 @@
+<script lang="ts">
+	const curlAuth = `# Gerar header Authorization:
+echo -n 'SUA_API_KEY:' | base64 -w0
+# Usar: -H "Authorization: Basic <resultado>"`;
+
+	const curlCreate = `curl -X POST https://API_URL/opg/v1/charges \\
+  -H "Content-Type: application/json" \\
+  -H "Authorization: Basic $(printf 'API_KEY:' | base64 -w0)" \\
+  -d '{
+    "pos_id": 1,
+    "amount": 5000.00,
+    "callback_url": "https://teu-sistema.com/webhook"
+  }'`;
+
+	const responseCreate = `{
+  "id": "abc123...",
+  "qrcode_url": "https://API_URL/api/charges/abc123/qrcode.png",
+  "deeplink_redirect": "https://WEB_URL/abc123",
+  "expires_at": "2026-11-14T18:10:00Z"
+}`;
+
+	const curlPay = `curl -X POST https://API_URL/api/charges/abc123/pay \\
+  -H "Content-Type: application/json" \\
+  -d '{"decision": "accepted"}'
+# ou: "decision": "rejected"`;
+
+	const webhookBody = `{
+  "id": "txn_xyz789",
+  "charge_id": "abc123",
+  "status": "accepted",
+  "amount": 5000.00,
+  "currency": "AOA"
+}`;
+
+	const validateNode = `// Node.js
+const crypto = require('crypto');
+const expected = crypto.createHmac('sha256', WEBHOOK_SECRET)
+  .update(rawBody).digest('hex');
+const valid = crypto.timingSafeEqual(
+  Buffer.from(expected), Buffer.from(signature)
+);`;
+</script>
+
 <svelte:head>
 	<title>Documentação — Payments API Gateway</title>
 </svelte:head>
@@ -15,9 +58,7 @@
 		<section>
 			<h2>Autenticação</h2>
 			<p>O endpoint de criação usa <strong>HTTP Basic Auth</strong>: username = API key, password vazio.</p>
-			<pre><code># Gerar header Authorization:
-echo -n 'SUA_API_KEY:' | base64 -w0
-# Usar: -H "Authorization: Basic &lt;resultado&gt;"</code></pre>
+			<pre><code>{curlAuth}</code></pre>
 			<p>Os restantes endpoints (<code>GET /api/charges/*</code>, <code>POST /api/charges/*/pay</code>) não requerem autenticação.</p>
 		</section>
 
@@ -30,21 +71,9 @@ echo -n 'SUA_API_KEY:' | base64 -w0
 				<span class="auth-badge">Basic Auth</span>
 			</div>
 			<p>Criar uma nova charge.</p>
-			<pre><code>curl -X POST https://API_URL/opg/v1/charges \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Basic $(printf 'API_KEY:' | base64 -w0)" \
-  -d '{
-    "pos_id": 1,
-    "amount": 5000.00,
-    "callback_url": "https://teu-sistema.com/webhook"
-  }'</code></pre>
+			<pre><code>{curlCreate}</code></pre>
 			<p><strong>Resposta 201:</strong></p>
-			<pre><code>{
-  "id": "abc123...",
-  "qrcode_url": "https://API_URL/api/charges/abc123/qrcode.png",
-  "deeplink_redirect": "https://WEB_URL/abc123",
-  "expires_at": "2026-11-14T18:10:00Z"
-}</code></pre>
+			<pre><code>{responseCreate}</code></pre>
 
 			<div class="endpoint">
 				<div class="method get">GET</div>
@@ -63,16 +92,13 @@ echo -n 'SUA_API_KEY:' | base64 -w0
 				<code>/api/charges/{'{'}id{'}'}/pay</code>
 			</div>
 			<p>Aprovar ou rejeitar uma charge.</p>
-			<pre><code>curl -X POST https://API_URL/api/charges/abc123/pay \
-  -H "Content-Type: application/json" \
-  -d '{"decision": "accepted"}'
-# ou: "decision": "rejected"</code></pre>
+			<pre><code>{curlPay}</code></pre>
 
 			<div class="endpoint">
 				<div class="method get">GET</div>
 				<code>/health</code>
 			</div>
-			<p>Estado do servidor. Devolve <code>{"{''}status":"ok"{'}'}</code>.</p>
+			<p>Estado do servidor. Devolve <code>{'{"status":"ok"}'}</code>.</p>
 		</section>
 
 		<section>
@@ -89,22 +115,11 @@ echo -n 'SUA_API_KEY:' | base64 -w0
 				</tbody>
 			</table>
 
-			<pre><code>{`{
-  "id": "txn_xyz789",
-  "charge_id": "abc123",
-  "status": "accepted",
-  "amount": 5000.00,
-  "currency": "AOA"
-}`}</code></pre>
+			<pre><code>{webhookBody}</code></pre>
 
 			<h3>Validar a assinatura</h3>
-			<pre><code>// Node.js
-const crypto = require('crypto');
-const expected = crypto.createHmac('sha256', WEBHOOK_SECRET)
-  .update(rawBody).digest('hex');
-const valid = crypto.timingSafeEqual(
-  Buffer.from(expected), Buffer.from(signature)
-);</code></pre>
+			<pre><code>{validateNode}</code></pre>
+
 			<p class="warn">O webhook é enviado <strong>uma única vez</strong>, sem retry. Implementa idempotência no teu endpoint.</p>
 		</section>
 
